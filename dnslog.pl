@@ -8,7 +8,7 @@ my %dns = ();
 sub block_domain {
     my ($domain) = @_;
     my $p = \%dns;
-    my $tail_key, my $tail_hash;
+    my $tail_key, my $tail_hash = $p;
     for my $key (reverse(split(/\./, $domain))) {
 	$tail_key = $key;
 	$tail_hash = $p;
@@ -21,7 +21,9 @@ sub block_domain {
 	}
 	$p = $$p{$key};    
     }
-    $$tail_hash{$tail_key} = '*';
+    if($tail_key) {
+	$$tail_hash{$tail_key} = '*';
+    }
 }
 
 sub is_blocked {
@@ -51,32 +53,31 @@ sub process_hosts_blocked {
 
 my %access = ();
 
-sub rev_dom {
+sub reverse_domain {
     my($domain) = @_;
     return join('.', reverse(split(/\./, $domain)));
 }
+
+my $DOMAIN_REGEX = "(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])";
 
 sub process_dns_query_log {
     my($filename) = @_;
     open my $dns_query_log_file, '<', $filename or die "Could not open $filename\n";
     while (my $line = <$dns_query_log_file> ) {
-	my @words = split(/query:\s/, $line);
-	@words = split(/\s/, $words[1]);
-	my $domain = $words[0];
-	my @segments = split(/\./, $domain);
-	if($#segments gt 1) {
-	    #ignore domain names with no dot inside
-
-	    if(!is_blocked($domain)) {
-		if(exists($access{$domain})) {
-		    $access{$domain}++;
-		} else {
-		    $access{$domain} = 1;
-		}
+	$line =~ /query:\s($DOMAIN_REGEX)\sIN\sA/;
+	my $domain = $1;
+	if(! $domain) {
+	    next;
+	}
+	if(!is_blocked($domain)) {
+	    if(exists($access{$domain})) {
+		$access{$domain}++;
+	    } else {
+		$access{$domain} = 1;
 	    }
 	}
     }
-    my @sorted_keys = sort {rev_dom($a) cmp rev_dom($b) } keys %access;
+    my @sorted_keys = sort {reverse_domain($a) cmp reverse_domain($b) } keys %access;
     for my $key (@sorted_keys) {
 	print("$key $access{$key}\n");
     }
