@@ -58,13 +58,14 @@ sub reverse_domain {
     return join('.', reverse(split(/\./, $domain)));
 }
 
-my $DOMAIN_REGEX = "(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])";
+#my $DOMAIN_REGEX = "(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])";
 
 sub process_dns_query_log {
     my($filename) = @_;
     open my $dns_query_log_file, '<', $filename or die "Could not open $filename\n";
     while (my $line = <$dns_query_log_file> ) {
-	$line =~ /query:\s($DOMAIN_REGEX)\sIN\sA/;
+#	$line =~ /query:\s($DOMAIN_REGEX)\sIN\sA/;
+	$line =~ /query:\s((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)+([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))\sIN\sA/;
 	my $domain = $1;
 	if(! $domain) {
 	    next;
