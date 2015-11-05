@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use diagnostics;
+#use diagnostics;
 
 my %dns = ();
 
@@ -19,7 +19,7 @@ sub block_domain {
 	} else {
 	    $$p{$key} = {};
 	}
-	$p = \%{$$p{$key}};    
+	$p = $$p{$key};    
     }
     $$tail_hash{$tail_key} = '*';
 }
@@ -32,7 +32,7 @@ sub is_blocked {
 	    if('*' eq $$p{$key}) {
 		return 1;
 	    }
-	    $p = \%{$$p{$key}};
+	    $p = $$p{$key};
 	} else {
 	    return 0;
 	}
