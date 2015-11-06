@@ -1,4 +1,5 @@
 ad.net
 www.ad.net
+# another bad one
 adserver.com
 

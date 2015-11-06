@@ -6,6 +6,9 @@ use warnings;
 
 my %dns = ();
 
+my $DOMAIN_REGEX = qr /(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)+([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])/o;
+my $EXTRACT_DOMAIN_REGEX = qr /query:\s(${DOMAIN_REGEX})\sIN\sA/o;
+
 sub block_domain {
     my ($domain) = @_;
     my $p = \%dns;
@@ -48,7 +51,9 @@ sub process_hosts_blocked {
     
     while (my $line = <$host_blocked_file> ) {
 	chomp($line);
-	block_domain($line);
+	if($line =~ /$DOMAIN_REGEX/) {
+	    block_domain($line);
+	}
     }
 }
 
@@ -58,9 +63,6 @@ sub reverse_domain {
     my($domain) = @_;
     return join('.', reverse(split(/\./, $domain)));
 }
-
-
-my $EXTRACT_DOMAIN_REGEX = qr /query:\s((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)+([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]))\sIN\sA/;
 
 sub process_dns_query_log {
     my($filename) = @_;
