@@ -187,7 +187,7 @@ sub main {
     given($command) {
 	when ($_ eq "help" || $_ eq "?") { help; }
 	when("processlog") { process_dns_query_log($dns_query_log); }
-	when("simplify") { serialize_blocked_domains; }
+	when("simplify") { list_blocked_domains $hosts_blocked; }
 	when("add") {
 	    add_domain @params;
 	    list_blocked_domains $hosts_blocked;
