@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 no warnings;
-use warnings;
+#use warnings;
 #use diagnostics;
 #use re 'debug';
 use 5.10.0;
@@ -71,6 +71,7 @@ sub reverse_domain {
 
 sub process_dns_query_log {
     my($filename) = @_;
+    say STDERR "Processing query log file: [$filename]";
     open my $dns_query_log_file, '<', $filename or die "Could not open query log file [$filename]\n";
     while (my $line = <$dns_query_log_file> ) {
 	$line =~ /$EXTRACT_DOMAIN_REGEX/;
@@ -116,6 +117,7 @@ sub serialize_blocked_domains() {
 
 sub list_blocked_domains {
     my ($filename) = @_;
+    say STDERR "Generating hosts blocked file: [$filename]";
     open my $OUTPUT, '>', $filename or die "Could not open blocked domains file [$filename]\n";
 
     my @domains = serialize_blocked_domains;
@@ -136,6 +138,7 @@ sub add_domain {
 
 sub generate_zone {
     my ($filename) = @_;
+    say STDERR "Generating zone.adblock file [$filename]";
 
     open my $OUTPUT, '>', $filename or die "Could not open zone output file [$filename]\n";
     
