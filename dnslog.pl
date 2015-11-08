@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 use strict;
+no warnings;
 use warnings;
 #use diagnostics;
 #use re 'debug';
@@ -22,6 +23,7 @@ sub block_domain {
 	$tail_hash = $p;
 	if(exists $$p{$key}) {
 	    if('*' eq $$p{$key}) {
+		say STDERR "Domain $domain already blocked.";
 		return;
 	    }
 	} else {
@@ -57,6 +59,7 @@ sub process_hosts_blocked {
 	$line =~ /$COMMENT_REGEX/ and next;
 	$line =~ /$VALID_DOMAIN_REGEX/ and block_domain($1);
     }
+    close $host_blocked_file;
 }
 
 my %access = ();
@@ -103,16 +106,24 @@ sub serialize_blocked_domains_rec {
 }
 
 sub serialize_blocked_domains() {
-
     my @block_list = ();
     serialize_blocked_domains_rec(\@block_list, \%dns, '');
     @block_list = sort(@block_list);
 
     map $_ = reverse_domain($_), @block_list;
+    return @block_list;
+}
 
-    for my $dom (@block_list) {
-	say $dom;
+sub list_blocked_domains {
+    my ($filename) = @_;
+    open my $OUTPUT, '>', $filename or die "Could not open blocked domains file [$filename]\n";
+
+    my @domains = serialize_blocked_domains;
+    for my $dom (@domains) {
+	say $OUTPUT $dom;
     }
+
+    close $OUTPUT;
 }
 
 sub add_domain {
@@ -123,15 +134,39 @@ sub add_domain {
     }
 }
 
+sub generate_zone {
+    my ($filename) = @_;
+
+    open my $OUTPUT, '>', $filename or die "Could not open zone output file [$filename]\n";
+    
+    my @domains = serialize_blocked_domains;
+    for my $domain (@domains) {
+	say $OUTPUT qq(zone "$domain" { type master; file "/etc/bind/ionescu/adblock/db.adblock"; };);
+    }
+    close $OUTPUT;
+}
+
+sub help {
+	    say STDERR "  Usage:";
+	    say STDERR "    $0 <blocked_hosts_file.txt> <domains.blocked> <dnsquery.log> <zones.adblock> help|simplify|processlog|add|generatezone|addgen";
+	    say "";
+	    say "    Files are identified by extension.";
+	    say "    The first non file parameter is the command. All following parameters are command parameters."
+}
+
 sub main {
     my $hosts_blocked = "hosts_blocked.txt";
+    my $domains_blocked;
+    my $zones_file = "zones.adblock";
     my $dns_query_log = "";
     my $command;
     my @params = ();
     for my $e (@ARGV) {
 	given($e) {
 	    when (/\.txt$/i) { $hosts_blocked = $e; }
+	    when (/\.blocked$/i) { $domains_blocked  = $e; }
 	    when (/\.log$/i) { $dns_query_log = $e; }
+	    when (/\.adblock/) { $zones_file = $e; }
 	    default { 
 		if(!$command) {
 		    $command = $e;
@@ -143,21 +178,26 @@ sub main {
     }
 
     process_hosts_blocked($hosts_blocked);
+    $domains_blocked and process_hosts_blocked($domains_blocked);
+
 
     given($command) {
-	when ($_ eq "help" || $_ eq "?") { 
-	    say STDERR "  Usage:";
-	    say STDERR "    $0 <blocked_hosts_file.txt> <dnsquery.log> help|simplify|processlog|add";
-	    say "";
-	    say "    Files are identified by extension.";
-	    say "    The first non file parameter is the command. All followin parameters are command parameters."
-	}
+	when ($_ eq "help" || $_ eq "?") { help; }
 	when("processlog") { process_dns_query_log($dns_query_log); }
 	when("simplify") { serialize_blocked_domains; }
 	when("add") {
 	    add_domain @params;
-	    serialize_blocked_domains;
+	    list_blocked_domains $hosts_blocked;
 	}
+	when("generatezone") {
+	    generate_zone;
+	}
+	when("addgen") {
+	    add_domain @params;
+	    list_blocked_domains $hosts_blocked;
+	    generate_zone $zones_file;
+	}
+	default { help; }
     }
 }
 
