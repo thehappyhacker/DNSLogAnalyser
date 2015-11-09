@@ -53,6 +53,7 @@ sub is_blocked {
 
 sub process_hosts_blocked {
     my($filename) = @_;
+
     open my $host_blocked_file, '<', $filename or die "Could not open blocked hosts file [$filename]\n";
     
     while (my $line = <$host_blocked_file> ) {
@@ -70,7 +71,9 @@ sub reverse_domain {
 }
 
 sub process_dns_query_log {
-    my($filename) = @_;
+    my($filename, @params) = @_;
+    my($sort_order) = @params;
+
     say STDERR "Processing query log file: [$filename]";
     open my $dns_query_log_file, '<', $filename or die "Could not open query log file [$filename]\n";
     while (my $line = <$dns_query_log_file> ) {
@@ -87,7 +90,12 @@ sub process_dns_query_log {
 	    }
 	}
     }
-    my @sorted_keys = sort {reverse_domain($a) cmp reverse_domain($b) } keys %access;
+    my @sorted_keys;
+    if($sort_order eq 'access') {
+	@sorted_keys = sort { $access{$b} <=> $access{$a} } keys %access;
+    } else {
+	@sorted_keys = sort {reverse_domain($a) cmp reverse_domain($b) } keys %access;
+    }
     for my $key (@sorted_keys) {
 	say "$key $access{$key}";
     }
@@ -186,14 +194,14 @@ sub main {
 
     given($command) {
 	when ($_ eq "help" || $_ eq "?") { help; }
-	when("processlog") { process_dns_query_log($dns_query_log); }
+	when("processlog") { process_dns_query_log $dns_query_log, @params; }
 	when("simplify") { list_blocked_domains $hosts_blocked; }
 	when("add") {
 	    add_domain @params;
 	    list_blocked_domains $hosts_blocked;
 	}
 	when("generatezone") {
-	    generate_zone;
+	    generate_zone $zones_file;
 	}
 	when("addgen") {
 	    add_domain @params;
