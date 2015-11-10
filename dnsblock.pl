@@ -157,6 +157,22 @@ sub generate_zone {
     close $OUTPUT;
 }
 
+sub filter {
+    my(@params) = @_;
+    while(my $line = <STDIN>) {
+	$line =~ /$EXTRACT_DOMAIN_REGEX/;
+	my $domain = $1;
+	if(! $domain) {
+	    next;
+	}
+	if(is_blocked($domain)) {
+	    say "blocked: $domain";
+	} else {
+	    print $line;
+	}
+    }
+}
+
 sub help {
 	    say STDERR "  Usage:";
 	    say STDERR "    $0 <blocked_hosts_file.txt> <domains.blocked> <dnsquery.log> <zones.adblock> help|simplify|processlog|add|generatezone|addgen";
@@ -207,6 +223,9 @@ sub main {
 	    add_domain @params;
 	    list_blocked_domains $hosts_blocked;
 	    generate_zone $zones_file;
+	}
+	when("filter") {
+	    filter @params;
 	}
 	default { help; }
     }
