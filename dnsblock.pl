@@ -7,10 +7,13 @@ no warnings;
 use 5.10.0;
 
 my %dns = ();
+my %local_name_cache = ('127.0.0.1' => 'localhost');
 
 my $VALID_DOMAIN_REGEX = qr /((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*(([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-])*[A-Za-z0-9]))$/o;
 my $DOMAIN_REGEX =       qr /(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)+(([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-])*[A-Za-z0-9])/o;
 my $EXTRACT_DOMAIN_REGEX = qr /query:\s(${DOMAIN_REGEX})\sIN\sA/o;
+my $EXTRACT_IP = qr /^(.+)\sclient\s(\d+\.0\.0\.\d+)#\d+:.+query:\s(.+)\sIN A.+/o;
+my $REMOVE_END_DOT = qr /^(.+)\.$/o;
 
 my $COMMENT_REGEX = qr /^\s*#/o;
 
@@ -168,7 +171,25 @@ sub filter {
 	if(is_blocked($domain)) {
 	    say "blocked: $domain";
 	} else {
-	    print $line;
+	  #  say $line;
+	    $line =~ /$EXTRACT_IP/;
+	    my $time = $1;
+	    my $ip = $2;
+	    my $remote_host = $3;
+	    my $local_name = $local_name_cache{$ip};
+	    if(! $local_name) {
+		$local_name = `dig +short -x $ip`;
+		if($local_name) {
+		    $local_name =~ /$REMOVE_END_DOT/;
+		    $local_name = $1;
+		    $local_name_cache{$ip} = $local_name;
+		} else {
+		    $local_name = $ip;
+		}
+	    }
+	    say "$time client: $local_name, query: $remote_host";
+
+
 	}
     }
 }
